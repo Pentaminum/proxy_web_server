@@ -12,7 +12,7 @@ def handle_request(request):
         response = 'HTTP/1.1 404 Not Found\r\n\r\n'
         return response.encode()
 
-    with open('test.html', 'rb') as file:
+    with open(path[1:], 'rb') as file:
         content = file.read()
         response = 'HTTP/1.1 200 OK\r\n'
         response += f'Content-Length: {len(content)}\r\n\r\n'
@@ -60,4 +60,5 @@ def start_server(port):
 
 if __name__ == '__main__':
     # Start the server on port 8080
-    start_server(8085)
+    start_server(8081)
+
