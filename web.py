@@ -13,6 +13,12 @@ def handle_request(request):
         print("Content-Length header is required for POST requests")
         response = 'HTTP/1.1 411 Length Required\r\n\r\n'
         return response.encode()
+    
+    # 403 Forbidden: Check if access to the resource is allowed
+    if "private" in path:
+        print("Access to the resource is forbidden")
+        response = 'HTTP/1.1 403 Forbidden\r\n\r\n'
+        return response.encode()
 
     # 404 Not Found: Check if the requested resource is valid
     if not os.path.exists(path[1:]):
@@ -24,9 +30,8 @@ def handle_request(request):
     if method not in ['GET', 'POST', 'PUT', 'DELETE']:
         response = 'HTTP/1.1 400 Bad Request\r\n\r\n'
         return response.encode()
-    #403
+
     #304
-    #411
 
     # 200 OK
     with open(path[1:], 'rb') as file:
