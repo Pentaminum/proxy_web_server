@@ -19,6 +19,14 @@ def handle_request(request):
         print("No such file")
         response = 'HTTP/1.1 404 Not Found\r\n\r\n'
         return response.encode()
+    
+    #400: Check if request is in valid syntax(e.g. valid method)
+    if method not in ['GET', 'POST', 'PUT', 'DELETE']:
+        response = 'HTTP/1.1 400 Bad Request\r\n\r\n'
+        return response.encode()
+    #403
+    #304
+    #411
 
     # 200 OK
     with open(path[1:], 'rb') as file:
