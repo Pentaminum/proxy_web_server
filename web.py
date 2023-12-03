@@ -4,14 +4,23 @@ import os
 def handle_request(request):
     lines = request.split('\r\n')
     method, path, _ = lines[0].split(' ')
+    content_length_header = next((line for line in lines if line.startswith('Content-Length:')), None)
     print(f"Method: {method}, Path: {path}")
 
-    # 404: Check if the requested resource is valid
+    # 411 Length Required: Check if request has proper Content-Length value
+    if method == 'POST' and not content_length_header:
+        # 411: Length Required
+        print("Content-Length header is required for POST requests")
+        response = 'HTTP/1.1 411 Length Required\r\n\r\n'
+        return response.encode()
+
+    # 404 Not Found: Check if the requested resource is valid
     if not os.path.exists(path[1:]):
         print("No such file")
         response = 'HTTP/1.1 404 Not Found\r\n\r\n'
         return response.encode()
 
+    # 200 OK
     with open(path[1:], 'rb') as file:
         content = file.read()
         response = 'HTTP/1.1 200 OK\r\n'
