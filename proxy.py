@@ -13,6 +13,41 @@ def handle_proxy_request(client_socket, request, target_port, port):
     print(path)
     # Extract the target host from the request
     target_host = lines[1].split(': ')[1].split(':')[0]
+    content_length_header = next((line for line in lines if line.startswith('Content-Length:')), None)
+
+    # 411 Length Required: Check if request has proper Content-Length value
+    if method == 'POST':
+        if content_length_header is None:
+            # Content-Length header is missing
+            print("Content-Length header is required for POST requests")
+            response = 'HTTP/1.1 411 Length Required\r\n\r\n'
+            client_socket.sendall(response.encode())
+            client_socket.close()
+            return
+        
+        try:
+            content_length = int(content_length_header.split(':')[1].strip())
+            if content_length == 0:
+                # Content-Length is present but has a value of 0
+                print("Content-Length header must be greater than 0 for POST requests")
+                response = 'HTTP/1.1 411 Length Required\r\n\r\n'
+                client_socket.sendall(response.encode())
+                client_socket.close()
+                return
+        except ValueError:
+            # Content-Length header has a non-integer value
+            print("Invalid Content-Length header value for POST requests")
+            response = 'HTTP/1.1 411 Length Required\r\n\r\n'
+            client_socket.sendall(response.encode())
+            client_socket.close()
+            return
+        
+    #400: Check if request is in valid syntax(e.g. valid method)
+    if method not in ['GET', 'POST', 'PUT', 'DELETE']:
+        response = 'HTTP/1.1 400 Bad Request\r\n\r\n'
+        client_socket.sendall(response.encode())
+        client_socket.close()
+        return
 
     # Modify the path in the request to include the target port
     modified_request = request.replace(f' http://localhost:{port}/{path}', f' http://localhost:{target_port}/{path}', 1)
