@@ -9,6 +9,8 @@ def handle_request(request):
     method, path, _ = lines[0].split(' ')
     print(f"Method: {method}, Path: {path}")
     content_length_header = next((line for line in lines if line.startswith('Content-Length:')), None)
+    
+    # Check if the requested resource exists
 
     # 411 Length Required: Check if request has proper Content-Length value
     if method == 'POST':
@@ -49,6 +51,30 @@ def handle_request(request):
         return response.encode()
 
     #304
+    # Set a specific date and time
+    specific_date = datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+
+    # Now you can use specific_date in your comparison
+    last_modified_time = specific_date
+    if_modified_since_header = next((line for line in lines if line.startswith('If-Modified-Since:')), None)
+    if if_modified_since_header:
+        try:
+            # Extract the date from the header using the correct index
+            header_date_str = if_modified_since_header.split(':', 1)[1].strip()
+            # Parse the date from the header
+            header_date = datetime.strptime(header_date_str, '%a, %d %b %Y %H:%M:%S %Z').replace(tzinfo=timezone.utc)
+
+            # Compare the last modification time with the date from the header
+            if last_modified_time >= header_date:
+                # The resource hasn't been modified since the specified date
+                print("Resource not modified since the specified date")
+                response = 'HTTP/1.1 304 Not Modified\r\n\r\n'
+                return response.encode()
+        except ValueError:
+            # Invalid date format in the header
+            print("Invalid If-Modified-Since header format")
+            response = 'HTTP/1.1 400 Bad Request\r\n\r\n'
+            return response.encode()
 
     # 200 OK
     with open(path[1:], 'rb') as file:
@@ -79,7 +105,7 @@ def start_server(port):
             
             try:
                 # Receive data from the client
-                request = client_socket.recv(4096).decode()
+                request = client_socket.recv(9192).decode()
 
                 # Handle the request
                 response = handle_request(request)

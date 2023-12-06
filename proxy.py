@@ -15,6 +15,12 @@ def handle_proxy_request(client_socket, request, target_port, port):
     target_host = lines[1].split(': ')[1].split(':')[0]
     content_length_header = next((line for line in lines if line.startswith('Content-Length:')), None)
 
+    if path in cache and 'Last-Modified' in cache[path]:
+        # Add If-Modified-Since header to the request
+        if 'If-Modified-Since' not in request:
+            last_modified_date = cache[path]['Last-Modified']
+            request += f'If-Modified-Since: {last_modified_date}\r\n'
+
     # 411 Length Required: Check if request has proper Content-Length value
     if method == 'POST':
         if content_length_header is None:
@@ -52,34 +58,48 @@ def handle_proxy_request(client_socket, request, target_port, port):
     # Modify the path in the request to include the target port
     modified_request = request.replace(f' http://localhost:{port}/{path}', f' http://localhost:{target_port}/{path}', 1)
 
-    # Check if the response is in the cache
-    if path in cache:
-        print(f"Cache hit for {path}")
-        cached_response = cache[path]['response']
-        client_socket.sendall(cached_response)
+    # Connect to the target server
+    target_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    target_socket.connect((target_host, target_port))
+
+    # Forward the modified request to the target server
+    target_socket.sendall(modified_request.encode())
+
+    # Receive the response from the target server
+    target_response = target_socket.recv(9192)
+
+    # Check for a 304 Not Modified response
+    if 'HTTP/1.1 304 Not Modified' in target_response.decode():
+            print(f"Received 304 Not Modified for {path}")
+            print(f"Cache hit for {path}")
+            # Use the cached response
+            cache[path]['response'] = target_response
+            cached_response = cache[path]['response']
+            client_socket.sendall(cached_response)
+            
     else:
-        # Connect to the target server
-        target_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        target_socket.connect((target_host, target_port))
-
-        # Forward the modified request to the target server
-        target_socket.sendall(modified_request.encode())
-
-        # Receive the response from the target server
-        target_response = target_socket.recv(4096)
-        print(target_response)
-        # Cache the response
-        cache[path] = {'response': target_response}
+        if path in cache:
+            # Update the cache with the new response
+            cache[path]['response'] = target_response
+            # Optionally, update the 'last-modified' timestamp in the cache if applicable
+            if 'last-modified' in cache[path]:
+                # Update the timestamp based on the target server's 'last-modified' header
+                # Assuming the 'last-modified' header is present in the target response
+                # You might need to adjust this part based on the actual structure of your response
+                last_modified_header = 'Last-Modified: Thu, 01 Jan 2023 00:00:00 GMT'
+                cache[path]['last-modified'] = last_modified_header
+        else:
+            # Cache the new response
+            # Extract the 'last-modified' header from the target response if applicable
+            last_modified_header = target_response.decode().split('Last-Modified: ', 1)[1].split('\r\n', 1)[0] if 'Last-Modified' in target_response.decode() else None
+            cache[path] = {'response': target_response, 'last-modified': last_modified_header}
 
         # Send the response back to the client
         client_socket.sendall(target_response)
 
-        # Close the target socket
-        target_socket.close()
 
-    # Close the client socket
+    target_socket.close()
     client_socket.close()
-
 
 def start_proxy_server(port, port_list):
     # Create a socket
@@ -100,7 +120,7 @@ def start_proxy_server(port, port_list):
 
             try:
                 # Receive data from the client
-                request = client_socket.recv(4096).decode()
+                request = client_socket.recv(9192).decode()
 
                 # For each target port, handle the proxy request in a new thread
                 for target_port in port_list:
