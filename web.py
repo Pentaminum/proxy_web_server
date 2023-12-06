@@ -1,5 +1,7 @@
 import socket
 import os
+from datetime import datetime, timezone
+from email.utils import formatdate
     
 def handle_request(request):
     lines = request.split('\r\n')
@@ -56,6 +58,7 @@ def handle_request(request):
 
     return response
 
+
 def start_server(port):
     # Create a socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -76,7 +79,7 @@ def start_server(port):
             try:
                 # Receive data from the client
                 request = client_socket.recv(1024).decode()
-                
+
                 # Handle the request
                 response = handle_request(request)
                 
@@ -96,5 +99,5 @@ def start_server(port):
 
 if __name__ == '__main__':
     # Start the server on port 8080
-    start_server(8081)
+    start_server(8080)
 
