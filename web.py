@@ -78,7 +78,7 @@ def start_server(port):
             
             try:
                 # Receive data from the client
-                request = client_socket.recv(1024).decode()
+                request = client_socket.recv(4096).decode()
 
                 # Handle the request
                 response = handle_request(request)

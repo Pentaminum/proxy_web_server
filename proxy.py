@@ -65,7 +65,7 @@ def start_proxy_server(port, port_list):
 
             try:
                 # Receive data from the client
-                request = client_socket.recv(2048).decode()
+                request = client_socket.recv(4096).decode()
                 print(request)
 
                 # For each target port, handle the proxy request in a new thread
