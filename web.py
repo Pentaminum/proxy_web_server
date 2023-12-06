@@ -8,11 +8,25 @@ def handle_request(request):
     print(f"Method: {method}, Path: {path}")
 
     # 411 Length Required: Check if request has proper Content-Length value
-    if method == 'POST' and not content_length_header:
-        # 411: Length Required
-        print("Content-Length header is required for POST requests")
-        response = 'HTTP/1.1 411 Length Required\r\n\r\n'
-        return response.encode()
+    if method == 'POST':
+        if content_length_header is None:
+            # Content-Length header is missing
+            print("Content-Length header is required for POST requests")
+            response = 'HTTP/1.1 411 Length Required\r\n\r\n'
+            return response.encode()
+        
+        try:
+            content_length = int(content_length_header.split(':')[1].strip())
+            if content_length == 0:
+                # Content-Length is present but has a value of 0
+                print("Content-Length header must be greater than 0 for POST requests")
+                response = 'HTTP/1.1 411 Length Required\r\n\r\n'
+                return response.encode()
+        except ValueError:
+            # Content-Length header has a non-integer value
+            print("Invalid Content-Length header value for POST requests")
+            response = 'HTTP/1.1 411 Length Required\r\n\r\n'
+            return response.encode()
     
     # 403 Forbidden: Check if access to the resource is allowed
     if "private" in path:
