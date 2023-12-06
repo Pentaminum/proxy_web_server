@@ -52,10 +52,10 @@ def handle_request(request):
 
     #304
     # Set a specific date and time
-    specific_date = datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    #specific_date = datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 
     # Now you can use specific_date in your comparison
-    last_modified_time = specific_date
+    last_modified_time = datetime.utcfromtimestamp(os.path.getmtime(path[1:])).replace(tzinfo=timezone.utc)
     if_modified_since_header = next((line for line in lines if line.startswith('If-Modified-Since:')), None)
     if if_modified_since_header:
         try:
@@ -65,10 +65,17 @@ def handle_request(request):
             header_date = datetime.strptime(header_date_str, '%a, %d %b %Y %H:%M:%S %Z').replace(tzinfo=timezone.utc)
 
             # Compare the last modification time with the date from the header
-            if last_modified_time >= header_date:
+            if last_modified_time <= header_date:
                 # The resource hasn't been modified since the specified date
                 print("Resource not modified since the specified date")
-                response = 'HTTP/1.1 304 Not Modified\r\n\r\n'
+                # Retrieve the actual last modification time of the resource
+                actual_last_modified_time = datetime.utcfromtimestamp(os.path.getmtime(path[1:])).replace(tzinfo=timezone.utc)
+
+                # Format the last modification time according to the HTTP date format
+                last_modified_str = formatdate(actual_last_modified_time.timestamp(), usegmt=True)
+
+                # Include the actual last modification time in the response headers
+                response = f'HTTP/1.1 304 Not Modified\r\nLast-Modified: {last_modified_str}\r\n\r\n'
                 return response.encode()
         except ValueError:
             # Invalid date format in the header
