@@ -5,9 +5,10 @@ from email.utils import formatdate
     
 def handle_request(request):
     lines = request.split('\r\n')
+    print(lines[0])
     method, path, _ = lines[0].split(' ')
-    content_length_header = next((line for line in lines if line.startswith('Content-Length:')), None)
     print(f"Method: {method}, Path: {path}")
+    content_length_header = next((line for line in lines if line.startswith('Content-Length:')), None)
 
     # 411 Length Required: Check if request has proper Content-Length value
     if method == 'POST':
