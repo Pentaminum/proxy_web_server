@@ -6,16 +6,16 @@ from email.utils import formatdate
 
 cache = {}
 
-def handle_proxy_request(client_socket, request, target_port):
+def handle_proxy_request(client_socket, request, target_port, port):
 # Parse the request
     lines = request.split('\r\n')
     method, path, _ = lines[0].split(' ')  # Extract the method and path from the request
-
+    print(path)
     # Extract the target host from the request
     target_host = lines[1].split(': ')[1].split(':')[0]
 
     # Modify the path in the request to include the target port
-    modified_request = request.replace(f' http://localhost/{path}', f' http://localhost:{target_port}/{path}', 1)
+    modified_request = request.replace(f' http://localhost:{port}/{path}', f' http://localhost:{target_port}/{path}', 1)
 
     # Check if the response is in the cache
     if path in cache:
@@ -31,8 +31,8 @@ def handle_proxy_request(client_socket, request, target_port):
         target_socket.sendall(modified_request.encode())
 
         # Receive the response from the target server
-        target_response = target_socket.recv(2048)
-
+        target_response = target_socket.recv(4096)
+        print(target_response)
         # Cache the response
         cache[path] = {'response': target_response}
 
@@ -66,11 +66,10 @@ def start_proxy_server(port, port_list):
             try:
                 # Receive data from the client
                 request = client_socket.recv(2048).decode()
-                print(request)
 
                 # For each target port, handle the proxy request in a new thread
                 for target_port in port_list:
-                    proxy_thread = threading.Thread(target=handle_proxy_request, args=(client_socket, request, target_port))
+                    proxy_thread = threading.Thread(target=handle_proxy_request, args=(client_socket, request, target_port, port))
                     proxy_thread.start()
 
             except Exception as e:
