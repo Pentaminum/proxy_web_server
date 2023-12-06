@@ -86,7 +86,7 @@ def handle_proxy_request(client_socket, request, target_port, port):
                 # Update the timestamp based on the target server's 'last-modified' header
                 # Assuming the 'last-modified' header is present in the target response
                 # You might need to adjust this part based on the actual structure of your response
-                last_modified_header = 'Last-Modified: Thu, 01 Jan 2023 00:00:00 GMT'
+                last_modified_header = target_response.decode().split('Last-Modified: ', 1)[1].split('\r\n', 1)[0] if 'Last-Modified' in target_response.decode() else None
                 cache[path]['last-modified'] = last_modified_header
         else:
             # Cache the new response
